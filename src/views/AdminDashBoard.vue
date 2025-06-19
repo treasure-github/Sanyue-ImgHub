@@ -22,6 +22,9 @@
                         </el-dropdown-menu>
                     </template>
                 </el-dropdown>
+                <el-tooltip :disabled="disableTooltip" content="全屏" placement="bottom">
+                        <font-awesome-icon icon="fa-th" class="header-icon" @click="showFullScreen"></font-awesome-icon>
+                    </el-tooltip>
                 <el-tooltip :disabled="disableTooltip" content="全选此页" placement="bottom">
                     <font-awesome-icon :icon="selectPageIcon" class="header-icon" @click="handleSelectPage"></font-awesome-icon>
                 </el-tooltip>
@@ -359,6 +362,9 @@ watch: {
     }
 },
 methods: {
+    showFullScreen(){
+        this.$router.push('/fallImg')
+    },
     handleDownload(key) {
         const link = document.createElement('a');
         link.href = `/file/${key}?from=admin`;
