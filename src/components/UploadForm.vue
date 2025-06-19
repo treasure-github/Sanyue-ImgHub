@@ -347,40 +347,65 @@ methods: {
         }
         const formData = new FormData()
         formData.append('file', file.file)
-        // 判断是否需要服务端压缩
-        const needServerCompress = this.fileList.find(item => item.uid === file.file.uid).serverCompress
-        const uploadChannel = this.fileList.find(item => item.uid === file.file.uid).uploadChannel || this.uploadChannel
-        const autoRetry = this.autoRetry && uploadChannel !== 'external'
-        const uploadNameType = uploadChannel === 'external' ? 'default' : this.uploadNameType
-        // 外链渠道，将外链写入formData
-        if (uploadChannel === 'external') {
-            formData.append('url', file.file.url)
-        }
-        axios({
-            url: '/upload' + '?authCode=' + cookies.get('authCode') + '&serverCompress=' + needServerCompress + '&uploadChannel=' + uploadChannel + '&uploadNameType=' + uploadNameType + '&autoRetry=' + autoRetry,
-            method: 'post',
-            data: formData,
-            onUploadProgress: (progressEvent) => {
-                const percentCompleted = Math.round((progressEvent.loaded / progressEvent.total) * 100)
-                file.onProgress({ percent: percentCompleted, file: file.file })
+
+        this.readImageSize(file).then((imgSize)=>{
+            if(imgSize.width && imgSize.height){
+                formData.append('width',imgSize.width)
+                formData.append('height',imgSize.height)
             }
-        }).then(res => {
-            file.onSuccess(res, file.file)
-        }).catch(err => {
-            if (err.response && err.response.status === 401) {
-                this.waitingList = []
-                this.fileList = []
-                this.$message.error('认证状态错误，请重新登录')
-                this.$router.push('/login')
-            } else {
-                this.exceptionList.push(file)
-                file.onError(err, file.file)
+            // 判断是否需要服务端压缩
+            const needServerCompress = this.fileList.find(item => item.uid === file.file.uid).serverCompress
+            const uploadChannel = this.fileList.find(item => item.uid === file.file.uid).uploadChannel || this.uploadChannel
+            const autoRetry = this.autoRetry && uploadChannel !== 'external'
+            const uploadNameType = uploadChannel === 'external' ? 'default' : this.uploadNameType
+            // 外链渠道，将外链写入formData
+            if (uploadChannel === 'external') {
+                formData.append('url', file.file.url)
             }
-        }).finally(() => {
-            if (this.uploadingCount + this.waitingCount === 0) {
-                this.uploading = false
-            }
+            axios({
+                url: '/upload' + '?authCode=' + cookies.get('authCode') + '&serverCompress=' + needServerCompress + '&uploadChannel=' + uploadChannel + '&uploadNameType=' + uploadNameType + '&autoRetry=' + autoRetry,
+                method: 'post',
+                data: formData,
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+                    file.onProgress({ percent: percentCompleted, file: file.file })
+                }
+            }).then(res => {
+                file.onSuccess(res, file.file)
+            }).catch(err => {
+                if (err.response && err.response.status === 401) {
+                    this.waitingList = []
+                    this.fileList = []
+                    this.$message.error('认证状态错误，请重新登录')
+                    this.$router.push('/login')
+                } else {
+                    this.exceptionList.push(file)
+                    file.onError(err, file.file)
+                }
+            }).finally(() => {
+                if (this.uploadingCount + this.waitingCount === 0) {
+                    this.uploading = false
+                }
+            })
         })
+        
+    },
+    readImageSize(file) {
+        return new Promise((resolve, reject) => {
+            if (!file.file || !file.file.type.includes('image')) {
+                return resolve;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => resolve({ width: img.width, height: img.height });
+                img.onerror = reject;
+                img.src = event.target.result;
+            };
+            reader.onerror = resolve;
+            reader.readAsDataURL(file.file);
+        });
     },
     handleRemove(file) {
         this.fileList = this.fileList.filter(item => item.uid !== file.uid)
