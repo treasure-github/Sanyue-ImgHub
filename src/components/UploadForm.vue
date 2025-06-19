@@ -77,8 +77,8 @@
                                         <el-button type="primary" round style="outline: none; border-right: none;">
                                             <font-awesome-icon icon="trash-alt" />
                                         </el-button>
-                                        <template v-slot:dropdown>
-                                            <el-dropdown-menu slot="dropdown">
+                                        <template #dropdown>
+                                            <el-dropdown-menu>
                                                 <el-dropdown-item @click="clearFileList">清空全部</el-dropdown-item>
                                                 <el-dropdown-item @click="clearSuccessList">清空已上传</el-dropdown-item>
                                             </el-dropdown-menu>
@@ -220,6 +220,11 @@ props: {
         type: String,
         default: 'default',
         required: false
+    },
+    uploadFolder: {
+        type: String,
+        default: '',
+        required: false
     }
 },
 data() {
@@ -357,7 +362,12 @@ methods: {
             formData.append('url', file.file.url)
         }
         axios({
-            url: '/upload' + '?authCode=' + cookies.get('authCode') + '&serverCompress=' + needServerCompress + '&uploadChannel=' + uploadChannel + '&uploadNameType=' + uploadNameType + '&autoRetry=' + autoRetry,
+            url: '/upload' + '?authCode=' + cookies.get('authCode') + 
+                '&serverCompress=' + needServerCompress + 
+                '&uploadChannel=' + uploadChannel + 
+                '&uploadNameType=' + uploadNameType + 
+                '&autoRetry=' + autoRetry + 
+                '&uploadFolder=' + this.uploadFolder,
             method: 'post',
             data: formData,
             onUploadProgress: (progressEvent) => {
@@ -805,15 +815,18 @@ methods: {
     },
     // 判断是否为图片类型
     isImage(fileName) {
-      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-      const extension = fileName.split('.').pop().toLowerCase();
-      return imageExtensions.includes(extension);
+        const imageExtensions = [
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'ico', 'avif', 'heic',
+            'jfif', 'pjpeg', 'pjp', 'raw', 'cr2', 'nef', 'dng', 'eps', 'ai', 'emf', 'wmf'
+        ];
+        const extension = fileName.split('.').pop().toLowerCase();
+        return imageExtensions.includes(extension);
     },
     // 判断是否为视频类型
     isVideo(fileName) {
-      const videoExtensions = ['mp4', 'webm', 'ogg', 'mkv'];
-      const extension = fileName.split('.').pop().toLowerCase();
-      return videoExtensions.includes(extension);
+        const videoExtensions = ['mp4', 'webm', 'ogg', 'mkv'];
+        const extension = fileName.split('.').pop().toLowerCase();
+        return videoExtensions.includes(extension);
     },
     handleScroll(event) {
         this.listScrolled = event.scrollTop > 0 && this.fileList.length > 0
@@ -1117,5 +1130,47 @@ methods: {
 .file-icon {
     font-size: 30px;
     color: var(--upload-list-file-icon-color);
+}
+
+/* Added for flickering light points effect */
+:deep(.el-upload-dragger::after) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Important: allows interaction with dragger content */
+  background-image: radial-gradient(circle, var(--el-upload-dragger-uniform-color) 0.8px, transparent 1.2px); /* Small, semi-transparent dots */
+  background-size: 30px 30px; /* Adjust for density of dots */
+  opacity: 0; /* Initially hidden */
+  transition: opacity 0.4s ease-in-out; /* Smooth appearance/disappearance of the effect layer */
+  z-index: 0; /* Positioned above the dragger's background but below its content */
+}
+
+.upload-card:hover :deep(.el-upload-dragger::after) {
+  opacity: 1; /* Make the dot layer visible on hover */
+  animation: flickerAnimation 2s infinite linear; /* Start flickering animation */
+}
+
+@keyframes flickerAnimation {
+  0% {
+    background-position: 0 0;
+    opacity: 0.7; /* Base opacity for visible dots */
+  }
+  25% {
+    opacity: 0.4; /* Dimming part of flicker */
+  }
+  50% {
+    background-position: 15px 15px; /* Shift dot positions for a twinkling movement */
+    opacity: 0.8; /* Brighter part of flicker */
+  }
+  75% {
+    opacity: 0.3; /* Further dimming */
+  }
+  100% {
+    background-position: 30px 30px; /* Continue dot movement */
+    opacity: 0.7; /* Return to base opacity */
+  }
 }
 </style>
